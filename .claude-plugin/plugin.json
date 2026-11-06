@@ -1,0 +1,35 @@
+{
+  "name": "clean-voice-prompt",
+  "version": "0.1.0",
+  "description": "Cleans voice-dictated prompts before they are sent: drops um, uh, filler like and you know, lead-ins and stuttered repeats, never touching code, paths, quotes, commands or numbers.",
+  "author": { "name": "CJ" },
+  "license": "MIT",
+  "userConfig": {
+    "mode": {
+      "type": "string",
+      "title": "Mode",
+      "description": "auto cleans and sends, with a short receipt; review puts the cleaned prompt back in the box for you to send; off leaves prompts alone.",
+      "options": ["auto", "review", "off"],
+      "default": "auto"
+    },
+    "level": {
+      "type": "string",
+      "title": "How much to cut",
+      "description": "standard removes hesitations, filler like and you know, lead-ins and repeats; aggressive also removes actually, literally, honestly, obviously and essentially when set off by commas.",
+      "options": ["standard", "aggressive"],
+      "default": "standard"
+    },
+    "receipt": {
+      "type": "boolean",
+      "title": "Show a receipt",
+      "description": "After a prompt is cleaned, show a short pop-up with what was saved.",
+      "default": true
+    },
+    "bridge": {
+      "type": "boolean",
+      "title": "Clean Remote Control prompts",
+      "description": "Also clean prompts sent from the phone or web through Remote Control (always auto: there is no box to review in).",
+      "default": true
+    }
+  }
+}
