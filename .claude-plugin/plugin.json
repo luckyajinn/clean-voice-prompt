@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "description": "Cleans voice-dictated prompts before they are sent: drops um, uh, filler like and you know, lead-ins and stuttered repeats, never touching code, paths, quotes, commands or numbers.",
   "author": { "name": "CJ" },
+  "homepage": "https://github.com/luckyajinn/clean-voice-prompt",
+  "repository": "https://github.com/luckyajinn/clean-voice-prompt",
   "license": "MIT",
   "userConfig": {
     "mode": {

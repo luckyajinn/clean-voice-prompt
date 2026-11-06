@@ -13,11 +13,22 @@ It uses Claude Code's early-access mod API, which can change between releases.
 
 ## Install
 
-Not published yet. To try it from this folder:
+At the prompt of a terminal session:
 
 ```
-claude --plugin-dir <path to this folder>
+/plugin install clean-voice-prompt --marketplace luckyajinn/clean-voice-prompt
 ```
+
+Answer `y` to add the marketplace, then pick a scope (user scope cleans prompts in every session).
+
+From a shell, the same thing is:
+
+```
+claude plugin marketplace add luckyajinn/clean-voice-prompt
+claude plugin install clean-voice-prompt@clean-voice-prompt --scope user
+```
+
+To run it from a local checkout while working on it: `claude --plugin-dir <path to this folder>`.
 
 ## What happens when you send a prompt
 

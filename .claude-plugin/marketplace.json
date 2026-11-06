@@ -1,0 +1,6 @@
+{
+  "name": "clean-voice-prompt",
+  "owner": { "name": "CJ" },
+  "description": "clean-voice-prompt: a Claude Code mod that cleans voice-dictated prompts before they are sent.",
+  "plugins": [{ "name": "clean-voice-prompt", "source": "./" }]
+}
