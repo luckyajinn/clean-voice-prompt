@@ -36,6 +36,7 @@ Only prompts you send are cleaned: from the prompt box, and from the phone or we
 | Hesitations | `um`, `uh`, `er`, `erm`, `hm`, `hmm`, anywhere | `mm` (millimetres), `uh-huh`, anything in ALL CAPS (`UM`, `ER`) |
 | Lead-ins at the start of a sentence | `Yeah,` `Okay,` `Alright,` `Anyway,` `So,` `Basically,` `Well,` `Right,` and chains like `yeah so` or `okay so basically` | an answer: `yeah`, `Yeah, do it.`, `Okay.`, anything with fewer than 3 words after the lead-in or in a prompt under 6 words; `So the...` and `Well tested`, `Right click` without a comma; `yes` and `no` always |
 | Fillers set off by commas | `, like,` `, you know,` `, yeah,` `, basically,`, `Like,` and `You know,` opening a sentence, `I mean,` opening a sentence, `..., you know.` closing one | `looks like`, `would like`, `like you did`, `do you know`, `I hope you know`, `use staging, I mean production` |
+| A bare `like` (no commas) | only between a preposition and a question word (`for like how`, `about like what`) or between `is`/`it's`/`was`... and an intensifier (`is like super slow`, `it's like really broken`) | `is like a proxy`, `feels like really slow`, `a tool like what we had`, `what is it like when` |
 | Repeats | a doubled pronoun, article, preposition or helper word (`I I`, `the the`, `to to`), and any repeated 2-4 word phrase (`can you, can you`) | `had had`, `that that`, `is is`, `very very`, `no no no`, and repeated numbers (`3 3`) |
 
 The **aggressive** level also cuts `actually`, `literally`, `honestly`, `obviously` and `essentially` when set off by commas, and `Look,` and `Listen,` opening a sentence.
@@ -69,7 +70,7 @@ In the plugin's config: **Mode** (`auto`, `review`, `off`), **How much to cut** 
 
 ## Limits
 
-- **Commas matter.** `like` and `you know` are only cut when commas set them off, so `it's like super slow` stays. Most dictation tools add commas; one that adds none gets fewer cuts.
+- **Commas matter.** `like` and `you know` are mostly cut only when commas set them off (the bare-`like` row above is the narrow exception), so `it's like broken` stays. Most dictation tools add commas; one that adds none gets fewer cuts.
 - **False starts and corrections are left in.** `add a button, no wait, a link` changes meaning if cut wrongly, so nothing tries.
 - **English only.**
 - The token figure in the receipt is an estimate (about four characters a token).

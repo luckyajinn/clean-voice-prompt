@@ -88,6 +88,23 @@ const REPEATABLE = new Set([
   'should', 'would', 'could', 'want', 'need', 'think', 'just', 'then', 'when', 'what', 'where', 'how', 'why',
 ])
 
+/**
+ * A "like" with no commas around it is cut in two narrow spots only:
+ * between a preposition and a question word ("a doc for like how this works"),
+ * and between a form of "be" and an intensifier ("it's like super slow").
+ * "The API is like a proxy", "looks like", "would like" and "like you did" stay.
+ */
+const LIKE_PREPOSITIONS = new Set(['for', 'about', 'of', 'with', 'from', 'into', 'on', 'at', 'in'])
+const LIKE_QUESTIONS = new Set(['how', 'what', 'why', 'where', 'when', 'which', 'who', 'whether'])
+const LIKE_BE = new Set([
+  'is', 'are', 'was', 'were', 'am', 'be', 'been', 'being',
+  "it's", "that's", "there's", "he's", "she's", "they're", "we're", "you're", "i'm",
+])
+const LIKE_INTENSIFIERS = new Set([
+  'super', 'really', 'very', 'so', 'totally', 'kinda', 'kind', 'pretty', 'just', 'literally', 'actually',
+  'completely', 'always', 'never', 'extremely', 'insanely', 'way',
+])
+
 /** Words fewer than this in the whole prompt: no lead-in or comma filler is cut. */
 const MIN_PROMPT_WORDS = 6
 /** Words a sentence must still hold after its lead-in is cut. */
@@ -388,6 +405,24 @@ function markFillers(tokens: Tok[], ctx: LineContext): void {
       if (LEAD_HARD.has(link.word) || LEAD_STRICT.has(link.word) || link.hasComma || hasHard) {
         cut(link.k, 1)
       }
+    }
+  }
+
+  // A bare "like" between words that leave it no other job (see LIKE_PREPOSITIONS).
+  for (let k = 1; k < n - 1; k++) {
+    if (wordAt(k) !== 'like') {
+      continue
+    }
+
+    const before = wordAt(k - 1)
+    const after = wordAt(k + 1)
+
+    if (
+      before !== undefined &&
+      after !== undefined &&
+      ((LIKE_PREPOSITIONS.has(before) && LIKE_QUESTIONS.has(after)) || (LIKE_BE.has(before) && LIKE_INTENSIFIERS.has(after)))
+    ) {
+      cut(k, 1)
     }
   }
 

@@ -67,6 +67,21 @@ export const CLEANED: Sample[] = [
     expected: 'First rename the helper.\r\nThen update the call sites.',
   },
   {
+    name: 'the test dictation: a bare like between a preposition and a question word',
+    input: "Let's get a new document for like how this works, and if we can get it done fast, um, that's great.",
+    expected: "Let's get a new document for how this works, and if we can get it done fast, that's great.",
+  },
+  {
+    name: 'a bare like between a form of be and an intensifier',
+    input: "The dashboard is like super slow and the export, it's like really broken too.",
+    expected: "The dashboard is super slow and the export, it's really broken too.",
+  },
+  {
+    name: 'a bare like after about, before what',
+    input: 'Tell me about like what the scheduler does when a job fails twice.',
+    expected: 'Tell me about what the scheduler does when a job fails twice.',
+  },
+  {
     name: 'aggressive also cuts comma-bounded actually and honestly',
     input: 'The cache is, actually, never cleared, honestly, so add a TTL to it.',
     expected: 'The cache is never cleared, so add a TTL to it.',
@@ -86,6 +101,10 @@ export const UNCHANGED: { name: string; input: string }[] = [
   { name: 'okay alone', input: 'Okay.' },
   { name: 'yes and no are never cut', input: 'Yes, and also no, do not delete the migrations folder.' },
   { name: 'like as a verb and comparison', input: 'It looks like the build is broken. I would like you to check it, like you did yesterday.' },
+  { name: 'like as a comparison after is', input: 'The API is like a proxy for the auth service, so treat it that way.' },
+  { name: 'like before a question word with no preposition', input: 'What is it like when the cache is cold on the first request?' },
+  { name: 'like after a noun before what', input: 'Use a tool like what we had before for the release notes.' },
+  { name: 'like after a verb before an intensifier', input: 'It feels like really slow progress on the migration this week.' },
   { name: 'inline code', input: 'Can you rename `um` to `uhm` in the file and keep `like` as is?' },
   { name: 'quoted text', input: 'Set the placeholder to "um, like, you know" and the tooltip to \u201cuh oh\u201d, then ship it.' },
   { name: 'single-quoted text', input: "Add a comment that says 'so, like, um' above the function, okay." },
