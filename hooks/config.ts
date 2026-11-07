@@ -9,6 +9,8 @@ export type Config = {
   level: Level
   receipt: boolean
   bridge: boolean
+  /** Trim tangents and over-explaining with a small model, after the word-level clean. */
+  condense: boolean
 }
 
 type Options = Readonly<Record<string, unknown>>
@@ -19,4 +21,5 @@ export const readConfig = (options: Options): Config => ({
   level: options.level === 'aggressive' ? 'aggressive' : 'standard',
   receipt: options.receipt !== false,
   bridge: options.bridge !== false,
+  condense: options.condense !== false,
 })

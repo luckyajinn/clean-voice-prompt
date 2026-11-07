@@ -584,5 +584,22 @@ export function clean(input: string, options: CleanOptions = {}): CleanResult {
   return { text, changed: true, removed }
 }
 
+/**
+ * The spans `clean` never touches (code, quotes, URLs, paths, numbers, names),
+ * each in full, and how many prose words are left around them.
+ */
+export function inspect(text: string): { spans: string[]; proseWords: number } {
+  if (HAS_MARKER.test(text)) {
+    return { spans: [], proseWords: 0 }
+  }
+
+  const { masked, spans } = protect(text)
+
+  return {
+    spans: spans.map(span => restore(span, spans)),
+    proseWords: (masked.match(/\p{L}+(?:['’-]\p{L}+)*/gu) ?? []).length,
+  }
+}
+
 /** A rough token count: about four characters a token for English prose. */
 export const estimateTokens = (text: string): number => Math.ceil(text.length / 4)

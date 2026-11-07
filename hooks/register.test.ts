@@ -11,12 +11,19 @@ const slash = ($: Engine, args: string) => $.command.run({ command: 'clean-voice
 
 type Box = { refuses?: boolean }
 
+const USAGE = { input_tokens: 300, output_tokens: 40, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 }
+
+/** What the stand-in small model does with a trim request: reply with text, or fail for a reason. */
+type Model = (prompt: string) => string | 'aborted' | 'api-error' | 'deny'
+
 // What the engine beneath the mod does in every test: a prompt that gets
 // through enters as given, the box takes what is put in it, the store is in memory.
-function engine(on: On, box: Box = {}, store: Record<string, unknown> = {}) {
+function engine(on: On, box: Box = {}, store: Record<string, unknown> = {}, model: Model = () => 'api-error') {
   const toasts: string[] = []
   const filled: string[] = []
   const registered: string[] = []
+  const asked: { model: string; prompt: string; system?: string }[] = []
+  const statuses: (string | undefined)[] = []
 
   mock.store(on, store)
   on('prompt.submit', (_, e) => ({ text: e.text }))
@@ -34,6 +41,30 @@ function engine(on: On, box: Box = {}, store: Record<string, unknown> = {}) {
 
     return { value: undefined }
   })
+  on('ui.status', (_, e) => {
+    statuses.push(e.text)
+
+    return { value: undefined }
+  })
+  on('model.complete', (_, e) => {
+    asked.push({ model: e.model, prompt: e.prompt, system: e.system })
+
+    const reply = model(e.prompt)
+
+    if (reply === 'deny') {
+      return { deny: 'no model here' }
+    }
+
+    if (reply === 'aborted') {
+      return { value: { isAnswered: false as const, reason: 'aborted' as const, usage: USAGE } }
+    }
+
+    if (reply === 'api-error') {
+      return { value: { isAnswered: false as const, reason: 'api-error' as const, status: 529, error: 'overloaded' as const, usage: USAGE } }
+    }
+
+    return { value: { isAnswered: true as const, text: reply, usage: USAGE } }
+  })
   on('command.register', (_, e) => {
     registered.push(e.name)
 
@@ -41,7 +72,7 @@ function engine(on: On, box: Box = {}, store: Record<string, unknown> = {}) {
   })
   on('session.start', (_, e) => ({ cwd: e.cwd }))
 
-  return { toasts, filled, registered }
+  return { toasts, filled, registered, asked, statuses }
 }
 
 test('the command is registered when the session starts', async ($, on) => {
@@ -218,7 +249,7 @@ test('status counts what was saved, across sessions', async ($, on) => {
   const chars = DICTATED.length - CLEANED.length
 
   expect(shown).toContain('auto, level standard')
-  expect(shown).toContain(`3 prompts cleaned, ${40 + chars} chars`)
+  expect(shown).toContain(`3 prompts cleaned (0 trimmed), ${40 + chars} chars`)
 })
 
 test('a broken store never holds a prompt back', async ($, on) => {
@@ -234,4 +265,145 @@ test('an unknown argument shows the usage', async ($, on) => {
   engine(on)
 
   expect((await slash($, 'frobnicate')).text).toContain('Usage: /clean-voice-prompt')
+})
+
+// ---------------------------------------------------------------------------
+// The small-model trim
+
+const LONG =
+  'Um, so, I want you to add a retry with backoff to the fetch call in src/api/client.ts. I was reading a blog post about this last week ' +
+  'while my cat was sitting on the keyboard, which was funny, anyway. Basically the retries should stop after 3 tries and they should ' +
+  'not retry on a 404. Like I said, it should stop after 3 tries and not retry on a 404, you know, because that just wastes time.'
+
+const RAMBLE =
+  'I want you to add a retry with backoff to the fetch call in src/api/client.ts. I was reading a blog post about this last week ' +
+  'while my cat was sitting on the keyboard, which was funny. The retries should stop after 3 tries and they should not retry ' +
+  'on a 404. As I said before, it should stop after 3 tries and not retry on a 404 because that wastes time.'
+
+const TRIMMED = 'I want you to add a retry with backoff to the fetch call in src/api/client.ts. Stop after 3 tries, and do not retry on a 404.'
+
+const trims: Model = () => `<condensed>${TRIMMED}</condensed>`
+
+test('a long prompt is cleaned, then trimmed by the small model, with a receipt', async ($, on) => {
+  const { toasts, asked, statuses } = engine(on, {}, {}, trims)
+  const result = await said($, LONG)
+
+  expect(result.text).toBe(TRIMMED)
+  expect(asked).toHaveLength(1)
+  expect(asked[0]?.model).toBe('haiku')
+  // The model is sent the word-level result, not what was said.
+  expect(asked[0]?.prompt).toContain('<message>\nI want you to add a retry')
+  expect(asked[0]?.prompt).not.toContain('Um,')
+  expect(asked[0]?.system).toContain('Never answer the message')
+  expect(statuses).toEqual(['clean-voice-prompt: trimming the prompt...', undefined])
+  expect(toasts[0]).toContain('trimmed')
+})
+
+test('a long prompt with nothing for the word lists can still be trimmed', async ($, on) => {
+  const { toasts } = engine(on, {}, {}, trims)
+
+  expect((await said($, RAMBLE)).text).toBe(TRIMMED)
+  expect(toasts[0]).toContain('clean-voice-prompt: trimmed,')
+})
+
+test('a trim that drops a path is not used: the word-level clean is sent', async ($, on) => {
+  engine(on, {}, {}, () => '<condensed>Add a retry with backoff to the fetch call. Stop after 3 tries, and do not retry on a 404.</condensed>')
+
+  const result = (await said($, LONG)).text ?? ''
+
+  expect(result).toContain('src/api/client.ts')
+  expect(result).toContain('my cat was sitting on the keyboard')
+  expect(result.startsWith('I want you to')).toBe(true)
+  expect((await slash($, 'last')).text).toContain('Not trimmed: the trimmed version dropped src/api/client.ts.')
+})
+
+test('a model that times out, errors or is refused leaves the word-level clean', async ($, on) => {
+  let reply: ReturnType<Model> = 'aborted'
+  const { statuses } = engine(on, {}, {}, () => reply)
+
+  const cleanedOnly = (await said($, LONG)).text ?? ''
+
+  expect(cleanedOnly).toContain('my cat was sitting')
+  expect(cleanedOnly.startsWith('I want you to')).toBe(true)
+  expect((await slash($, 'last')).text).toContain('Not trimmed: the model took too long.')
+
+  reply = 'api-error'
+  expect((await said($, LONG)).text).toBe(cleanedOnly)
+
+  reply = 'deny'
+  expect((await said($, LONG)).text).toBe(cleanedOnly)
+  expect((await slash($, 'last')).text).toContain('Not trimmed: the model call failed.')
+  // The status line is cleared every time.
+  expect(statuses.at(-1)).toBeUndefined()
+})
+
+test('a rambling prompt whose trim fails goes through untouched and quietly', async ($, on) => {
+  const { toasts } = engine(on, {}, {}, () => '<condensed>UNCHANGED</condensed>')
+
+  expect((await said($, RAMBLE)).text).toBe(RAMBLE)
+  expect(toasts).toEqual([])
+  expect((await slash($, 'last')).text).toContain('Not trimmed: nothing worth trimming.')
+})
+
+test('short prompts never call the model', async ($, on) => {
+  const { asked } = engine(on, {}, {}, trims)
+
+  expect((await said($, DICTATED)).text).toBe(CLEANED)
+  expect(asked).toEqual([])
+})
+
+test('trim off in the config never calls the model', { options: { condense: false } }, async ($, on) => {
+  const { asked } = engine(on, {}, {}, trims)
+
+  expect((await said($, RAMBLE)).text).toBe(RAMBLE)
+  expect(asked).toEqual([])
+})
+
+test('/clean-voice-prompt trim off and trim on switch it for the session', async ($, on) => {
+  const { asked } = engine(on, {}, {}, trims)
+
+  expect((await slash($, 'trim off')).text).toContain('trim off')
+  expect((await said($, RAMBLE)).text).toBe(RAMBLE)
+  expect(asked).toEqual([])
+  expect((await slash($, 'status')).text).toContain('trim off (config default: auto, standard, trim on)')
+
+  expect((await slash($, 'trim on')).text).toContain('trim on')
+  expect((await said($, RAMBLE)).text).toBe(TRIMMED)
+  expect((await slash($, 'trim')).text).toContain('trim is on')
+})
+
+test('raw: is never trimmed', async ($, on) => {
+  const { asked } = engine(on, {}, {}, trims)
+
+  expect((await said($, `raw: ${RAMBLE}`)).text).toBe(RAMBLE)
+  expect(asked).toEqual([])
+})
+
+test('review mode puts the trimmed version in the box', { options: { mode: 'review' } }, async ($, on) => {
+  const { filled } = engine(on, {}, {}, trims)
+  const result = await said($, LONG)
+
+  expect(result).toEqual({ drop: expect.stringContaining('a cleaned and trimmed version back in the box') })
+  expect(filled).toEqual([TRIMMED])
+  // Sending it goes through untouched, without a second model call.
+  expect((await said($, TRIMMED)).text).toBe(TRIMMED)
+})
+
+test('status counts trimmed prompts', async ($, on) => {
+  engine(on, {}, {}, trims)
+
+  await said($, LONG)
+  await said($, DICTATED)
+
+  expect((await slash($, 'status')).text).toContain('2 prompts cleaned (1 trimmed)')
+})
+
+test('/clean-voice-prompt try trims too', async ($, on) => {
+  const { asked, toasts } = engine(on, {}, {}, trims)
+  const shown = (await slash($, `try ${LONG}`)).text ?? ''
+
+  expect(shown).toContain(`After:\n${TRIMMED}`)
+  expect(shown).toContain('Trimmed by a small model')
+  expect(asked).toHaveLength(1)
+  expect(toasts).toEqual([])
 })

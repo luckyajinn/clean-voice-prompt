@@ -1,7 +1,7 @@
 {
   "name": "clean-voice-prompt",
-  "version": "0.1.0",
-  "description": "Cleans voice-dictated prompts before they are sent: drops um, uh, filler like and you know, lead-ins and stuttered repeats, never touching code, paths, quotes, commands or numbers.",
+  "version": "0.2.0",
+  "description": "Cleans voice-dictated prompts before they are sent: drops um, uh, filler like and you know, lead-ins and stuttered repeats, then has a small model trim tangents and over-explaining from long prompts, never touching code, paths, quotes, commands or numbers.",
   "author": { "name": "CJ" },
   "homepage": "https://github.com/luckyajinn/clean-voice-prompt",
   "repository": "https://github.com/luckyajinn/clean-voice-prompt",
@@ -25,6 +25,12 @@
       "type": "boolean",
       "title": "Show a receipt",
       "description": "After a prompt is cleaned, show a short pop-up with what was saved.",
+      "default": true
+    },
+    "condense": {
+      "type": "boolean",
+      "title": "Trim long prompts",
+      "description": "After the word-level clean, a small model (Haiku) trims tangents, repeated points and over-explaining from prompts of 40 words or more. Its version is only sent if it keeps every path, piece of code, number, quote, question and \"not\"; otherwise the prompt goes as cleaned.",
       "default": true
     },
     "bridge": {
